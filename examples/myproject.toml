@@ -1,0 +1,14 @@
+# myproject.toml — an example project config.
+#
+# The filename is arbitrary: only the path you pass to --project matters,
+# not what the file is called. This one uses the examples/ directory
+# itself as the "project" being synced, so the example works with no
+# further setup beyond adjusting vm.toml.
+
+project_root = "."                    # this examples/ directory
+remote_local_root = "ssh-mcp-light-example"  # lands under <remote-root>/ssh-mcp-light-example on the VM
+
+ignore = [
+  "*.log",
+  ".git/",
+]

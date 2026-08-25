@@ -1,0 +1,36 @@
+variables:
+  GOMODCACHE: $CI_PROJECT_DIR/.cache/gomod
+
+stages:
+  - lint
+  - test
+  - build
+
+default:
+  image: golang:1.25
+  cache:
+    key: go-mod-cache
+    paths:
+      - .cache/gomod
+
+lint:
+  stage: lint
+  before_script:
+    - go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+  script:
+    - $(go env GOPATH)/bin/golangci-lint run ./...
+
+test:
+  stage: test
+  script:
+    - go vet ./...
+    - go test ./... -timeout 5m
+
+build:
+  stage: build
+  script:
+    - go build -o ssh-mcp-light ./cmd/ssh-mcp-light
+  artifacts:
+    paths:
+      - ssh-mcp-light
+    expire_in: 1 week

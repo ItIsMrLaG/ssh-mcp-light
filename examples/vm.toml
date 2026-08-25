@@ -1,0 +1,14 @@
+# vm.toml — one VM, reachable over SSH on the default port.
+#
+# This declares the machine ssh-mcp-light is allowed to target, by the
+# logical name "local". Adjust address/user/identity_file/remote_root
+# below to match your own setup, then point the server at this file with
+# --vm-config (or the VMMCP_CONFIG environment variable).
+
+[vms.local]
+address = "127.0.0.1"
+port = 22
+user = "user"                                 # your SSH username on that host
+identity_file = "/home/user/.ssh/id_ed25519"  # path to your private key (unencrypted)
+remote_root = "/home/user/agents"             # a directory that user can write to
+description = "Local machine, reachable over SSH on port 22"
