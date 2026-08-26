@@ -42,20 +42,24 @@ func lookupVM(cfg *config.VMConfig, name string) (config.VM, bool) {
 }
 
 // connectMessage renders an sshlayer connection error into a message
-// naming the specific field (identity file, address:port, user) that
-// caused it, rather than just forwarding the underlying Go error text.
+// naming which VM and which kind of failure (identity file, network
+// connect, auth) caused it, rather than just forwarding the underlying Go
+// error text. Deliberately never includes the VM's address, port,
+// identity file path, or user — those are connection credentials from
+// vm.toml and must not be echoed back to the agent, so only the VM name
+// is named here.
 func connectMessage(code string, vm config.VM, err error) string {
 	switch code {
 	case codeKeyMissing:
-		return fmt.Sprintf("identity file %q for VM %q does not exist", vm.IdentityFile, vm.Name)
+		return fmt.Sprintf("identity file for VM %q does not exist", vm.Name)
 	case codeKeyUnreadable:
-		return fmt.Sprintf("identity file %q for VM %q is unreadable: %v", vm.IdentityFile, vm.Name, err)
+		return fmt.Sprintf("identity file for VM %q is unreadable", vm.Name)
 	case codeKeyEncrypted:
-		return fmt.Sprintf("identity file %q for VM %q is passphrase-protected, which is not supported", vm.IdentityFile, vm.Name)
+		return fmt.Sprintf("identity file for VM %q is passphrase-protected, which is not supported", vm.Name)
 	case codeSSHConnectFailed:
-		return fmt.Sprintf("could not connect to VM %q at %s:%d: %v", vm.Name, vm.Address, vm.Port, err)
+		return fmt.Sprintf("could not connect to VM %q", vm.Name)
 	case codeSSHAuthFailed:
-		return fmt.Sprintf("SSH authentication failed for VM %q as user %q: %v", vm.Name, vm.User, err)
+		return fmt.Sprintf("SSH authentication failed for VM %q", vm.Name)
 	default:
 		return err.Error()
 	}

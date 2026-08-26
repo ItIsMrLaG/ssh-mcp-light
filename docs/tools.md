@@ -56,7 +56,7 @@ that ignores all of this: it runs anywhere on the VM by design — see
 { "vm": "staging" }
 ```
 ```json
-{ "path": "/srv/agents/projects/api", "resolved_target": { "vm": "staging", "address": "10.0.4.12", "port": 22, "remote_base": "/srv/agents/projects/api" } }
+{ "path": "/srv/agents/projects/api", "resolved_target": { "vm": "staging", "remote_base": "/srv/agents/projects/api" } }
 ```
 
 ## `exec`
@@ -68,7 +68,7 @@ the VM.
 { "vm": "staging", "cmd": "systemctl", "args": ["status", "api"] }
 ```
 ```json
-{ "stdout": "...", "stderr": "", "exit_code": 3, "timed_out": false, "truncated_stdout": false, "truncated_stderr": false, "resolved_target": { "vm": "staging", "address": "10.0.4.12", "port": 22, "cwd": "/srv/agents" } }
+{ "stdout": "...", "stderr": "", "exit_code": 3, "timed_out": false, "truncated_stdout": false, "truncated_stderr": false, "resolved_target": { "vm": "staging", "cwd": "/srv/agents" } }
 ```
 
 ## `push`
@@ -77,7 +77,7 @@ the VM.
 { "vm": "staging", "files": ["cmd/api/main.go", "go.mod"], "dest": "./" }
 ```
 ```json
-{ "uploaded": ["cmd/api/main.go", "go.mod"], "skipped_by_ignore": [], "failed": [], "resolved_target": { "vm": "staging", "address": "10.0.4.12", "port": 22, "remote_base": "/srv/agents/projects/api" } }
+{ "uploaded": ["cmd/api/main.go", "go.mod"], "skipped_by_ignore": [], "failed": [], "resolved_target": { "vm": "staging", "remote_base": "/srv/agents/projects/api" } }
 ```
 
 ## `sync`
@@ -86,7 +86,7 @@ the VM.
 { "vm": "staging", "dry_run": true }
 ```
 ```json
-{ "dry_run": true, "to_upload": ["cmd/api/main.go"], "to_delete": ["old_binary"], "uploaded": [], "deleted": [], "skipped_symlinks": [], "protected_by_ignore": [], "failed": [], "resolved_target": { "vm": "staging", "address": "10.0.4.12", "port": 22, "remote_base": "/srv/agents/projects/api" } }
+{ "dry_run": true, "to_upload": ["cmd/api/main.go"], "to_delete": ["old_binary"], "uploaded": [], "deleted": [], "skipped_symlinks": [], "protected_by_ignore": [], "failed": [], "resolved_target": { "vm": "staging", "remote_base": "/srv/agents/projects/api" } }
 ```
 
 Drop `dry_run` (or set it `false`) to actually upload and delete.
