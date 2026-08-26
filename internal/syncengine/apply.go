@@ -1,6 +1,7 @@
 package syncengine
 
 import (
+	"os"
 	"path"
 
 	"ssh-mcp-light/internal/errcodes"
@@ -29,6 +30,19 @@ type ApplyResult struct {
 
 const uploadFileMode = 0o644
 const dirMode = 0o755
+
+// UploadMode derives the remote upload mode from a local file's mode:
+// uploadFileMode, with the executable bit set for everyone if the local
+// file is executable by anyone. Only the executable bit travels — the rest
+// of the local mode (e.g. a locally 0600 file) is not propagated, so a
+// pushed/synced file is always at least group/world-readable on the
+// remote.
+func UploadMode(localMode os.FileMode) os.FileMode {
+	if localMode.Perm()&0o111 != 0 {
+		return uploadFileMode | 0o111
+	}
+	return uploadFileMode
+}
 
 // Apply executes plan against remoteBase over transfer. remoteBaseCanonical
 // is resolved once by the caller, before Apply runs, and passed in fixed;
@@ -60,7 +74,7 @@ func Apply(transfer sshlayer.FileTransfer, remoteBase, remoteBaseCanonical strin
 			}
 			madeDirs[dir] = true
 		}
-		if err := transfer.Upload(u.LocalPath, remotePath, uploadFileMode); err != nil {
+		if err := transfer.Upload(u.LocalPath, remotePath, UploadMode(u.Mode)); err != nil {
 			result.Failed = append(result.Failed, FailedAction{
 				Path: u.RelPath, Action: "upload",
 				ErrorCode: classify(err), Message: err.Error(),

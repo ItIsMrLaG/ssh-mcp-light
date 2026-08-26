@@ -9,6 +9,7 @@ import (
 
 	"ssh-mcp-light/internal/ignore"
 	"ssh-mcp-light/internal/pathsafe"
+	"ssh-mcp-light/internal/syncengine"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -180,7 +181,7 @@ func RegisterPush(server *mcp.Server, deps *Deps) {
 				continue
 			}
 
-			if err := transfer.Upload(localAbs, remoteAbs, 0o644); err != nil {
+			if err := transfer.Upload(localAbs, remoteAbs, syncengine.UploadMode(info.Mode())); err != nil {
 				out.Failed = append(out.Failed, pushFailure{File: file, ErrorCode: classifyErr(err), Message: err.Error()})
 				continue
 			}

@@ -27,6 +27,7 @@ const mtimeSlack = 2 * time.Second
 type PlannedUpload struct {
 	RelPath   string
 	LocalPath string
+	Mode      os.FileMode // local file's raw mode; Apply derives the upload mode from it
 }
 
 // PlannedDelete is one remote-only entry selected for deletion, keyed by
@@ -51,6 +52,7 @@ type localEntry struct {
 	isLink  bool
 	size    int64
 	modTime time.Time
+	mode    os.FileMode
 }
 
 // walkLocal enumerates the project root using the real local filesystem
@@ -82,6 +84,7 @@ func walkLocal(root string) ([]localEntry, error) {
 			isLink:  isLink,
 			size:    info.Size(),
 			modTime: info.ModTime(),
+			mode:    info.Mode(),
 		})
 		return nil
 	})
@@ -150,6 +153,7 @@ func BuildPlan(projectRoot string, remoteEntries []sshlayer.FileInfo, includePat
 		plan.ToUpload = append(plan.ToUpload, PlannedUpload{
 			RelPath:   rel,
 			LocalPath: filepath.Join(projectRoot, filepath.FromSlash(rel)),
+			Mode:      localFiles[rel].mode,
 		})
 	}
 

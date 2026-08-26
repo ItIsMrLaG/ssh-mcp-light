@@ -17,8 +17,9 @@ type fakeTransfer struct {
 	failUpload map[string]error // remotePath -> error to return from Upload
 	dead       bool             // once true, every operation fails with ConnectionLostError
 
-	uploaded []string
-	removed  []string
+	uploaded     []string
+	uploadedMode map[string]os.FileMode
+	removed      []string
 }
 
 func (f *fakeTransfer) errIfDead() error {
@@ -32,7 +33,7 @@ func (f *fakeTransfer) Stat(string) (sshlayer.FileInfo, bool, error) {
 	return sshlayer.FileInfo{}, false, nil
 }
 func (f *fakeTransfer) ReadDirRecursive(string) ([]sshlayer.FileInfo, error) { return nil, nil }
-func (f *fakeTransfer) Upload(localPath, remotePath string, _ os.FileMode) error {
+func (f *fakeTransfer) Upload(localPath, remotePath string, mode os.FileMode) error {
 	if err := f.errIfDead(); err != nil {
 		return err
 	}
@@ -40,6 +41,10 @@ func (f *fakeTransfer) Upload(localPath, remotePath string, _ os.FileMode) error
 		return err
 	}
 	f.uploaded = append(f.uploaded, remotePath)
+	if f.uploadedMode == nil {
+		f.uploadedMode = map[string]os.FileMode{}
+	}
+	f.uploadedMode[remotePath] = mode
 	return nil
 }
 func (f *fakeTransfer) Remove(remotePath string) error {
@@ -147,4 +152,50 @@ func (f *realPathOverrideTransfer) RealPath(remotePath string) (string, error) {
 		return r, nil
 	}
 	return remotePath, nil
+}
+
+// T-SYNC-UPLOAD-EXEC-BIT: Apply derives the remote upload mode from each
+// PlannedUpload's local mode, not a single fixed constant, so an
+// executable local file stays executable on the remote and a
+// non-executable one lands at the plain default.
+func TestApply_UploadModeFollowsLocalExecBit(t *testing.T) {
+	base := "/srv/agents/projects/api"
+	f := &fakeTransfer{}
+
+	plan := &Plan{
+		ToUpload: []PlannedUpload{
+			{RelPath: "deploy.sh", LocalPath: "/local/deploy.sh", Mode: 0o755},
+			{RelPath: "readme.txt", LocalPath: "/local/readme.txt", Mode: 0o644},
+		},
+	}
+	result := Apply(f, base, base, plan)
+
+	if len(result.Failed) != 0 {
+		t.Fatalf("unexpected failures: %+v", result.Failed)
+	}
+	if got := f.uploadedMode[path.Join(base, "deploy.sh")]; got != 0o755 {
+		t.Fatalf("deploy.sh uploaded with mode %o, want 0755", got)
+	}
+	if got := f.uploadedMode[path.Join(base, "readme.txt")]; got != 0o644 {
+		t.Fatalf("readme.txt uploaded with mode %o, want 0644", got)
+	}
+}
+
+func TestUploadMode(t *testing.T) {
+	cases := []struct {
+		local os.FileMode
+		want  os.FileMode
+	}{
+		{0o644, 0o644},
+		{0o755, 0o755},
+		{0o600, 0o644}, // no exec bit anywhere: plain default
+		{0o640, 0o644}, // still no exec bit anywhere: plain default
+		{0o750, 0o755}, // owner+group exec: exec-for-everyone remotely
+		{0o700, 0o755}, // owner-exec-only is still enough to make it exec-for-everyone remotely
+	}
+	for _, c := range cases {
+		if got := UploadMode(c.local); got != c.want {
+			t.Errorf("UploadMode(%o) = %o, want %o", c.local, got, c.want)
+		}
+	}
 }

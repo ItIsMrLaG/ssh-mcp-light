@@ -56,6 +56,42 @@ func TestPush_Success(t *testing.T) {
 	}
 }
 
+// T-PUSH-PRESERVES-EXEC-BIT: a locally executable file is uploaded
+// executable-for-everyone; a plain file stays at the non-executable
+// default.
+func TestPush_PreservesExecBit(t *testing.T) {
+	e := newEnv(t, "projects/api")
+	e.writeLocal("deploy.sh", "#!/bin/sh\necho hi")
+	e.writeLocal("readme.txt", "notes")
+	if err := os.Chmod(filepath.Join(e.projectRoot, "deploy.sh"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	res, out := e.call("push", map[string]any{
+		"vm":    "testvm",
+		"files": []string{"deploy.sh", "readme.txt"},
+	})
+	if res.IsError {
+		t.Fatalf("unexpected error: %v", out)
+	}
+
+	info, err := os.Stat(filepath.Join(e.server.Root, "projects/api", "deploy.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Fatalf("deploy.sh remote mode = %o, want 0755", info.Mode().Perm())
+	}
+
+	info, err = os.Stat(filepath.Join(e.server.Root, "projects/api", "readme.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o644 {
+		t.Fatalf("readme.txt remote mode = %o, want 0644", info.Mode().Perm())
+	}
+}
+
 // T-PUSH-IGNORE-SKIP.
 func TestPush_IgnoreSkip(t *testing.T) {
 	e := newEnv(t, "projects/api")
@@ -196,6 +232,29 @@ func TestSync_IgnoreProtectsFromDelete(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(e.server.Root, "projects/api", "app.log")); err != nil {
 		t.Fatalf("app.log must not have been deleted: %v", err)
+	}
+}
+
+// T-SYNC-PRESERVES-EXEC-BIT: sync's upload path derives the remote mode
+// from the local file the same way push does.
+func TestSync_PreservesExecBit(t *testing.T) {
+	e := newEnv(t, "projects/api")
+	e.writeLocal("deploy.sh", "#!/bin/sh\necho hi")
+	if err := os.Chmod(filepath.Join(e.projectRoot, "deploy.sh"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	res, out := e.call("sync", map[string]any{"vm": "testvm"})
+	if res.IsError {
+		t.Fatalf("unexpected error: %v", out)
+	}
+
+	info, err := os.Stat(filepath.Join(e.server.Root, "projects/api", "deploy.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Fatalf("deploy.sh remote mode = %o, want 0755", info.Mode().Perm())
 	}
 }
 
